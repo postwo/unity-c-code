@@ -10,6 +10,7 @@ using System.Security.Cryptography.X509Certificates;
 RigidBody2D rigid;
 public float maxSpeed;
 SpriteRenderer spriteRenderer;
+Animator anim;
 
 void Awake()
 {
@@ -26,6 +27,11 @@ void Awake()
     이미지 교체 (sprite): 아이템을 먹었을 때 캐릭터 옷을 바꾸기
     */
     spriteRenderer = GetComponent<SpriteRenderer>();
+
+    //Animator는 그 이미지들을 갈아끼우며 **걷고, 뛰고, 점프하는 '동작'을 관리
+    anim = GetComponent<Animator>();
+
+
 
 }
 
@@ -51,7 +57,20 @@ void Update()
     }
 
     // 방향 전환 
-    spriteRenderer.flipX = 
+    if (Input.GetButtonDown("Horizontal")) 
+    //왼쪽 키를 눌렀으면 이미지를 뒤집어라
+    //좌우 반전 (flipX): 캐릭터가 왼쪽을 볼 때 이미지를 휙 돌리기
+    //이코드는 좌,우 두개다 적용 된다 false일떄는 이미지 원상태 true일경우는 이미지 반전 
+    spriteRenderer.flipX = Input.GetAxisRaw("Horizontal") == -1; //-1(왼쪽) 과 같으면 true가 되어서 이미지 반전 
+
+    //속도(움직임)'를 감시해서 애니메이션을 걷기 상태로 바꿀지, 가만히 서 있는 상태로 바꿀지 결정하는 '자동 스위치
+    //velocity.x는 좌우 속도 
+    // MathF.Abs 절대값을 적용 시킨다 왜 적용 시키냐면 왼쪽은 -값이어서 0.3보다 작기 때문에 워킹 상태가 유지된다 그러므로 절대값을 적용시켜서 음수값을 제거
+    if(MathF.Abs(rigid.velocity.x)< 0.3) //지금 좌우로 전혀 움직이지 않고 멈춰있는 상태인가?
+    anim.SetBool("isWalking",false); //캐릭터가 '기다리기(Idle)' 모션
+    else
+    anim.SetBool("isWalking",true); //'걷기(Walk)' 모션을 재생
+
 }
 
 //일반 Update에서 물리 힘을 주면 컴퓨터 사양(프레임)에 따라 이동 속도가 들쑥날쑥해질 수 있으므로 물리현상은 FixedUpdate에서 처리하는게좋다 
