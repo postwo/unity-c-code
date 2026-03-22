@@ -1,6 +1,9 @@
 ﻿
 
+using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
+using System.Drawing;
 using System.Numerics;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
@@ -9,6 +12,7 @@ using System.Security.Cryptography.X509Certificates;
 // Rigidbody2D 컴포넌트를 담을 변수를 선언
 RigidBody2D rigid;
 public float maxSpeed;
+public float jumpPower;
 SpriteRenderer spriteRenderer;
 Animator anim;
 
@@ -38,6 +42,18 @@ void Awake()
 
 void Update()
 {
+    if(Input.GetButtonDown("Jump") && !anim.GetBool("isJumping")) //점프 버튼을 눌렀고(&&), 현재 점프 중이 아닐 때(!isJumping)만 점프해라
+    {
+        //ForceMode2D.Impulse (폭발적인 힘)
+        //"서서히 공중으로 떠오르는 것"이 아니라 바닥을 박차고 순간적으로 튀어 올라야 하기 때문에, 반드시 Impulse 모드를 쓰는게 좋다 
+        rigid.AddForce(Vector2.up * jumpPower , ForceMode2D.Impulse);
+
+        // "isJumping"이라는 이름의 애니메이터 파라미터(bool)를 true(참)로 바꿉니다.
+        // 이 코드가 실행되는 순간, 애니메이터는 '점프 시작' 혹은 '공중 동작' 애니메이션으로 상태를 전환합니다.
+        anim.SetBool("isJumping",true);
+    }
+    
+
     //플레이어가 이동 버튼에서 손을 뗐을 때, 캐릭터가 빙판 위를 걷는 것처럼 끝없이 미끄러지는 것을 방지하고 속도를 급격히 줄여서 멈추게 하려는 용도
     if (Input.GetButtonUp("Horizontal")) // 좌,우 버튼을 땠을때 
     {
@@ -107,5 +123,32 @@ void FixedUpdate()
         //이렇게 vector를 만들어서 rigid.velocity에 넣어주면 원래가지고 있던 속도는 사라지고 현재만든 백터값이 들어간다 
         rigid.velocity = new Vector2(-maxSpeed, rigid.velocity.y);
     }
+
+    if(rigid.velocity.y < 0) // 현재 수직속도가 0이면 동작 
+    {
+    //RayCast: 오브젝트 검색을 위해 Ray를 쏘는 방식
+    //DrawRay: 에디터 상에서만 Ray를 그려주는 함수 
+    //**Debug.DrawRay**는 게임 화면에는 보이지 않지만, **에디터(Scene 뷰)에서만 보이는 "개발자 전용 가이드 라인"**을 그리는 도구
+    //캐릭터의 위치에서 발밑으로 초록색 선을 그어주는 아주 중요한 디버깅용 코드
+    Debug.DrawRay(rigid.position, Vector3.down,new Color(0,1,0)); // 초록색 실선이 보인다
+    //RayCastHit: Ray에 닿은 오브젝트
+    //캐릭터가 발밑으로 **"보이지 않는 투명한 레이저"**를 쏴서, 그 레이저에 무언가 걸렸을 때 그 물체의 이름을 알려주는 코드
+    //GetMask: 레이어 이름에 해당하는 정수값을 리턴하는 함수 
+    // 1. 레이저를 쏴서 맞은 정보를 rayHit이라는 상자에 담습니다.
+    RaycastHit2D rayHit = Physics2D.Raycast(rigid.position, Vector3.down, 1,LayerMask.GetMask("Platform"));
+    // 2. 만약 레이저가 무언가(collider)에 맞았다면?
+    if (rayHit.collider != null)
+    {
+        //distance:ray에 닿았을 때의 거리 
+        //이 코드는 캐릭터가 점프 후 내려올 때, 바닥과의 거리가 0.5m 이내로 가까워지면 '이제 착지했어!'라고 판단하고 점프 애니메이션을 꺼주는 역할을 합니다.
+        if(rayHit.distance < 0.5f)
+        // 맞은 물체의 이름을 콘솔창(Console)에 출력합니다.
+        //  Debug.Log(rayHit.collider.name);
+        anim.SetBool("isJumping",false); // 점프 모션을 끈다 
+
+    }
+    }
+    
+   
 }
     
